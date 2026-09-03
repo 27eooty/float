@@ -1,26 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRight } from "lucide-react";
-
 import { AccountGate } from "@/components/auth/account-gate";
 import { CloudBackupScheduler } from "@/components/cloud-backup-scheduler";
 import { RealityBridgeScheduler } from "@/components/reality-bridge-scheduler";
 import { MediaMaintenanceScheduler } from "@/components/media-maintenance-scheduler";
 import { DesktopShell } from "./desktop-shell";
 import { OfflinePushRevampAnnouncement } from "./offline-push-revamp-announcement";
-import { SplashAnimation } from "./splash-animation";
 import { MusicProvider } from "@/lib/music-context";
 import { hydrateKvDb, isKvHydrated } from "@/lib/kv-db";
 import { getThemeAssetMap, readThemeProfile } from "@/lib/theme-storage";
 import { resolveActiveIconSkins, type ThemeProfile } from "@/lib/theme-types";
 import { applyShellZoom, isMobileShell } from "@/lib/mobile-shell";
-import { hasPendingMcpOAuthCallback } from "@/lib/tool-executor";
 import { shouldRequestPwaFullscreen } from "@/lib/pwa-display-mode";
-
-const TEXT = {
-  loading: "\u52A0\u8F7D\u4E2D...",
-};
 
 const BUILTIN_FONT_URLS = [
   "/fonts/huiwen.woff2",
@@ -150,32 +142,9 @@ async function warmBuiltinFonts(shouldStop: () => boolean): Promise<void> {
   await Promise.all(BUILTIN_FONT_LOAD_SPECS.map((spec) => document.fonts.load(spec).catch(() => [])));
 }
 
-function SplashScreen({ ready = false, onEnter }: { ready?: boolean; onEnter?: () => void }) {
-  return (
-    <main className="app-root splash-root">
-      <section
-        className="phone-shell-wrap splash-shell-wrap"
-        aria-label={TEXT.loading}
-      >
-        <div className="phone-case">
-          <div className="phone-frame">
-            <div className="phone-shell splash-phone-screen">
-              <SplashAnimation />
-              <button
-                type="button"
-                className={ready ? "splash-enter-button splash-enter-button-show" : "splash-enter-button"}
-                onClick={onEnter}
-                disabled={!ready}
-                aria-label="Enter"
-              >
-                <ArrowRight size={18} strokeWidth={1.8} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  );
+function SplashScreen() {
+  // 问候动画页已移除：加载期只渲染纯色空白（无任何文字/动画），数据就绪后直接进入桌面
+  return <main className="app-root" style={{ position: "fixed", inset: 0, background: "#F1F2F6" }} aria-hidden />;
 }
 
 type PreparedDesktopTheme = {
@@ -229,7 +198,6 @@ async function prepareDesktopThemeForFirstPaint(): Promise<PreparedDesktopTheme>
 
 export function MainApp() {
   const [preparedDesktopTheme, setPreparedDesktopTheme] = useState<PreparedDesktopTheme | null>(null);
-  const [hydrated, setHydrated] = useState(false);
   const [splashDismissed, setSplashDismissed] = useState(false);
   const [kvHydrateFailed, setKvHydrateFailed] = useState(false);
   const [initAttempt, setInitAttempt] = useState(0);
@@ -261,10 +229,8 @@ export function MainApp() {
 
       if (cancelled) return;
       setPreparedDesktopTheme(nextPreparedTheme);
-      setHydrated(true);
-      if (hasPendingMcpOAuthCallback()) {
-        setSplashDismissed(true);
-      }
+      // 问候页已移除：数据就绪后自动直接进入桌面
+      setSplashDismissed(true);
     })();
 
     // 安卓全屏兜底。是否请求全屏在每次点击时读取（渠道默认 + 用户「显示系统状态栏」偏好），
@@ -326,7 +292,7 @@ export function MainApp() {
   return (
     <AccountGate>
       {!splashDismissed ? (
-        <SplashScreen ready={hydrated} onEnter={() => setSplashDismissed(true)} />
+        <SplashScreen />
       ) : (
         <main className="app-root">
           <MusicProvider>
